@@ -1,0 +1,149 @@
+/**
+ * National Admin sidebar — shared Reports-page visual treatment.
+ * Load on all national-admin pages after page inline styles.
+ * Uses #na-sidebar so it wins over leftover page .sidebar rules.
+ */
+
+html.na-app-root,
+body.na-app {
+    background-color: #ffffff;
+    color-scheme: light;
+}
+
+body.na-app .sidebar,
+body.na-app #na-sidebar.national-admin-sidebar {
+    width: 185px !important;
+    min-width: 185px !important;
+    height: 100vh;
+    background-color: #ffffff !important;
+    border-right: 3px solid #d7d7d7 !important;
+    display: flex;
+    flex-direction: column;
+    padding-top: 151px !important;
+    flex-shrink: 0;
+}
+
+body.na-app .sidebar-logo,
+body.na-app #na-sidebar .sidebar-logo {
+    position: absolute !important;
+    top: 46px !important;
+    left: 28px !important;
+    width: 140px !important;
+    height: auto;
+    z-index: 1001;
+}
+
+body.na-app .sidebar-logo img,
+body.na-app #na-sidebar .sidebar-logo img {
+    width: 140px !important;
+    height: auto;
+    display: block;
+}
+
+body.na-app .sidebar-list,
+body.na-app #na-sidebar .sidebar-list {
+    list-style: none;
+    padding: 0 0 0 28px !important;
+    margin: 0;
+}
+
+body.na-app .sidebar-list li {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+body.na-app .sidebar-link,
+body.na-app #na-sidebar nav a.sidebar-link {
+    display: block;
+    width: 118px !important;
+    min-height: 31px !important;
+    font-size: 15px !important;
+    font-weight: 400 !important;
+    color: #545454 !important;
+    -webkit-text-fill-color: #545454 !important;
+    font-family: 'Montserrat', sans-serif !important;
+    padding: 5px 8px !important;
+    margin-bottom: 8px !important;
+    border-radius: 4px !important;
+    line-height: 21px !important;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    background: transparent !important;
+}
+
+body.na-app .sidebar-link:hover,
+body.na-app .sidebar-link.active,
+body.na-app #na-sidebar nav a.sidebar-link:hover,
+body.na-app #na-sidebar nav a.sidebar-link.active {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    background: linear-gradient(to right, #38b6ff, #38b6ff) !important;
+}
+
+body.na-app .menu-icon {
+    display: none;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 2px solid #e5e7eb;
+    background: #ffffff !important;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    z-index: 1002;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #38b6ff !important;
+}
+
+body.na-app .menu-icon:hover {
+    background: #f3f4f6 !important;
+    border-color: #38b6ff !important;
+}
+
+body.na-app .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+body.na-app .sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+@media (min-width: 901px) {
+    body.na-app .sidebar,
+    body.na-app #na-sidebar.national-admin-sidebar {
+        position: relative !important;
+    }
+
+    body.na-app .sidebar-overlay {
+        display: none !important;
+    }
+}
+
+@media (max-width: 900px) {
+    body.na-app .sidebar,
+    body.na-app #na-sidebar.national-admin-sidebar {
+        position: fixed;
+    }
+
+    body.na-app .sidebar-link,
+    body.na-app #na-sidebar nav a.sidebar-link {
+        width: 92% !important;
+        min-height: 0 !important;
+        padding: 0.85rem 18px !important;
+        margin-bottom: 0.35rem !important;
+        border-radius: 10px !important;
+    }
+}

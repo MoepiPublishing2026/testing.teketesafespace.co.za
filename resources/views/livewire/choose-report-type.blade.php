@@ -1,0 +1,259 @@
+<div class="min-h-screen bg-white flex flex-col font-[Montserrat] relative w-full pt-[104px] lg:pt-[188px]"> <!-- Header -->
+    <style>
+        @media (max-width: 1023px) {
+            .report-header > div { padding-left: 1rem !important; padding-right: 1rem !important; }
+            .report-header img { width: 120px !important; margin-left: 0 !important; }
+        }
+        .page-footer { padding-top: 25px !important; padding-bottom: 22px !important; }
+        @media (min-width: 1024px) {
+            .page-footer p { position: relative !important; left: 50px !important; }
+        }
+        @media (min-width: 1440px) {
+            .page-footer img { position: relative !important; left: -15px !important; }
+        }
+    </style>
+    <header
+    class="report-header fixed top-0 left-0 w-full bg-white z-50 ">
+
+    <div class="flex justify-between items-center w-full px-6 lg:px-12 py-4">
+
+        <!-- Logo -->
+        <div class="flex items-center ml-4 lg:ml-10">
+    <img
+        src="{{ asset('images/logo.png') }}"
+        alt="Safe Space Logo"
+        class="
+            w-[120px]
+            sm:w-[140px]
+            md:w-[200px]
+            lg:w-[300px]
+            xl:w-[300px]
+            h-auto
+            object-contain
+            flex-shrink-0">
+</div>
+
+        <!-- Top Right Links -->
+        <div class="flex items-center gap-4">
+
+            <!-- Desktop Navigation -->
+            
+             <div class="hidden md:flex items-center gap-6 lg:gap-8 xl:gap-10
+            font-[Montserrat]
+            text-[18px]
+            lg:text-[18px]
+            xl:text-[20px]
+            ">
+
+               
+                  <a href="javascript:void(0);" onclick="window.history.back();"
+                        class="transition-colors hover:!text-[#c7da30]" style="color: black; text-decoration: none;">
+                        Back
+                    </a>
+                <a href="{{ route('landing-page') }}"
+                    class="text-black transition-colors hover:!text-[#c7da30]">
+                    Home
+                </a>
+
+                <a href="{{ route('about-us') }}"
+                    class="text-black transition-colors hover:!text-[#c7da30]">
+                    About Us
+                </a>
+
+                <a href="{{ rtrim(config('tekete.workshop_booking_url'), '/') }}/workshops"
+                    class="text-black transition-colors hover:!text-[#c7da30]">
+                    Workshops
+                </a>
+
+                <a href="{{ route('contact-us') }}"
+                    class="text-black transition-colors hover:!text-[#c7da30]">
+                    Contact Us
+                </a>
+
+            </div>
+
+            <!-- Mobile Hamburger Menu -->
+            <div class="md:hidden">
+                <button id="mobile-menu-button"
+                    class="p-2 rounded-md text-[#c7da30] hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[#c7da30]">
+
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+</header>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu" class="fixed inset-0 z-50 hidden md:hidden">
+        <div class="fixed inset-0" onclick="toggleMobileMenu()"></div>
+        <div
+            class="fixed top-0 right-0 z-10 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out">
+            <div class="flex items-center justify-between p-4">
+                
+                <button onclick="toggleMobileMenu()" class="p-2 rounded-md text-[#c7da30] hover:bg-gray-100">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <nav class="mt-8 px-4">
+                <a href="javascript:void(0);" onclick="window.history.back(); toggleMobileMenu();"
+                    class="block py-3 text-[#38b6ff] hover:text-[#c7da30] transition-colors"
+                    style="font-family: 'Montserrat', sans-serif; font-size: 17px;">
+                    Back
+                </a>
+                <a href="{{ route('landing-page') }}" onclick="toggleMobileMenu()"
+                    class="block py-3 text-[#38b6ff] hover:text-[#c7da30] transition-colors {{ request()->routeIs('landing-page') ? 'font-bold' : '' }}"
+                    style="font-family: 'Montserrat', sans-serif; font-size: 17px;">
+                    Home
+                </a>
+                <a href="{{ route('about-us') }}" onclick="toggleMobileMenu()"
+                    class="block py-3 text-[#38b6ff] hover:text-[#c7da30] transition-colors {{ request()->routeIs('about-us') ? 'font-bold' : '' }}"
+                    style="font-family: 'Montserrat', sans-serif; font-size: 17px;">
+                    About Us
+                </a>
+                <a href="{{ rtrim(config('tekete.workshop_booking_url'), '/') }}/workshops" onclick="toggleMobileMenu()"
+                    class="block py-3 text-[#38b6ff] hover:text-[#c7da30] transition-colors"
+                    style="font-family: 'Montserrat', sans-serif; font-size: 17px;">
+                    Workshops
+                </a>
+                <a href="{{ route('contact-us') }}" onclick="toggleMobileMenu()"
+                    class="block py-3 text-[#38b6ff] hover:text-[#c7da30] transition-colors {{ request()->routeIs('contact-us') ? 'font-bold' : '' }}"
+                    style="font-family: 'Montserrat', sans-serif; font-size: 17px;">
+                    Contact Us
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Section -->
+<div class="flex-grow flex flex-col items-center justify-center px-6 py-10 font-[Montserrat]">
+
+    <!-- Title for Mobile (Outside Box) -->
+    <h1 class="sm:hidden font-bold uppercase text-black text-center text-[20px] mb-6">
+        REPORT ANONYMOUSLY?
+    </h1>
+
+    <!-- Rectangle -->
+    <div
+        class="w-[95%]
+           sm:w-[85%]
+           md:w-[70%]
+           lg:w-[55%]
+           xl:w-[45%]
+           max-w-[600px]
+           min-h-[120px]
+           sm:min-h-[200px]
+           md:min-h-[258px]
+           border-2
+           border-[#c7da30]
+           rounded-lg
+           bg-transparent
+           flex
+           flex-col
+           items-center
+           justify-center
+           px-6
+           sm:px-8
+           py-6
+           sm:py-8">
+
+       <!-- Title for Desktop/Tablet (Inside Box) -->
+<h1 class="hidden sm:block font-bold
+           uppercase
+           text-black
+           text-center
+           sm:text-[18px]
+           md:text-[22px]
+           lg:text-[30px]
+           mb-14">
+    REPORT ANONYMOUSLY?
+</h1>
+
+<!-- Buttons -->
+<div class="flex justify-center gap-4 sm:gap-8 md:gap-12 w-full">
+
+    <button
+        wire:click="selectReportType(true)"
+        class="w-[42%]
+               max-w-[180px]
+               h-[42px]
+               sm:h-[46px]
+               md:h-[50px]
+               border-2
+               border-[#c7da30]
+               rounded-full
+               bg-transparent
+               text-[#38b6ff]
+               
+               text-[14px]
+               sm:text-[15px]
+    
+               transition">
+        Yes
+    </button>
+
+    <button
+        wire:click="selectReportType(false)"
+        class="w-[42%]
+               max-w-[180px]
+               h-[42px]
+               sm:h-[46px]
+               md:h-[50px]
+               border-2
+               border-[#c7da30]
+               rounded-full
+               bg-transparent
+               text-[#38b6ff]
+               
+               text-[14px]
+               sm:text-[15px]
+
+               transition">
+        No
+    </button>
+
+</div>
+
+    </div>
+
+</div>
+
+
+
+    <x-site-footer class="page-footer" />
+</div>
+
+<script>
+    // Mobile menu functionality
+    function toggleMobileMenu() {
+        const mobileMenu = document.getElementById('mobile-menu');
+        const isHidden = mobileMenu.classList.contains('hidden');
+
+        if (isHidden) {
+            mobileMenu.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        } else {
+            mobileMenu.classList.add('hidden');
+            document.body.style.overflow = 'auto'; // Restore scrolling
+        }
+    }
+
+    // Add event listener for the mobile menu button
+    document.addEventListener('DOMContentLoaded', function() {
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        if (mobileMenuButton) {
+            mobileMenuButton.addEventListener('click', toggleMobileMenu);
+        }
+    });
+</script>

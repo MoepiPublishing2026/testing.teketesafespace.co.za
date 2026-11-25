@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en" class="pa-app-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Tekete SafeSpace – Heat-Map</title>
+    <x-favicon />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --theme-gradient: linear-gradient(to right, #38b6ff, #38b6ff);
+            --theme-dark: #0c8cb3ff;
+            --red: #de241b;
+            --yellow: #fdd103;
+            --blue: #3b82f6;
+            --green: #b1c658;
+            --bg: white;
+            --text: #253f58ff;
+        }
+
+        * { box-sizing: border-box; }
+        html { overflow-x: hidden; }
+        html, body {
+            font-family: 'Montserrat', sans-serif !important;
+            color: #545454 !important;
+            background-color: #ffffff !important;
+            color-scheme: light;
+        }
+        body.pa-app {
+            display: flex;
+            min-height: 100vh;
+            width: 100%;
+            min-width: 0;
+            overflow-x: hidden;
+            overflow-y: hidden;
+            margin: 0;
+        }
+
+        /* Prevent overlapping during html2canvas page slicing */
+        .no-pdf-break, 
+        .heatmap-table-container,
+        .geo-map-container,
+        .card {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+
+        /* Force block display so flexbox doesn't collapse during screenshot */
+        #main-content {
+            display: block !important;
+        }
+
+        /* Target the SVG or Canvas map container specifically */
+        #district-geo-map svg,
+        #district-geo-map canvas {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+
+        .main-panel {
+            flex: 1 1 0;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            height: 100vh;
+            background: #fff;
+            overflow: hidden;
+        }
+        .topbar {
+            width: 100%;
+            background: #fff;
+            border: 0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-end;
+            padding: 24px 39px 0;
+            position: relative;
+            z-index: 10;
+            box-shadow: none;
+            height: 78px;
+            flex: 0 0 78px;
+            min-height: 0;
+        }
+        .profile { display: flex; align-items: flex-start; gap: 12px; }
+        .profile-avatar {
+            width: 52px; height: 52px; flex: 0 0 52px; border-radius: 50%;
+            background: transparent; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: none;
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile .meta { text-align: right; padding-top: 4px; line-height: 1.08; }
+        .profile .meta > span:first-child { color: #38b6ff; font-size: 18px; font-weight: 700; }
+        .profile .meta span { display: block; line-height: 1.3; font-weight: 700; color: #232323; }
+        .profile .meta .role { margin-top: 2px; font-weight: 400; color: #4a4a4a; font-size: 13px; }
+        .dashboard-scroll {
+            flex: 1 1 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 3px 2.5rem 2.5rem;
+            max-width: 1280px;
+            width: 100%;
+            margin: 0 auto;
+            background: #fff;
+        }
+
+        h1 {
+            margin: 0 0 0.5rem;
+            font-weight: 900 !important;
+            font-size: 32px !important;
+            font-family: 'Montserrat', sans-serif !important;
+            letter-spacing: 0.03em;
+            text-transform: uppercase !important;
+            color: #545454 !important;
+            text-align: center;
+        }
+        h2 {
+            color: #38b6ff !important;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0 0 0.35rem;
+        }
+        .map-source-note { margin: 0 0 1rem; font-size: 12px; color: #6b7280; font-weight: 500; }
+        .subtitle { margin-bottom: 2rem; color: #5f6b7b; text-align: center; font-size: 13px; font-weight: 400; }
+
+        .filter-panel {
+            background: #fff;
+            border-radius: 10px;
+            padding: 1.25rem;
+            width: 100%;
+            border: 2px solid #c7da30;
+            margin-bottom: 1.8rem;
+        }
+        .filter-panel hr {
+            border: none;
+            border-top: 1px solid #eaeaea;
+            margin: 0.75rem 0 1rem;
+        }
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+        .filters select,
+        .filters input[type="date"] {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 15px;
+            font-weight: 400;
+            padding: 0.5rem 0.65rem;
+            border: 1px solid #111827;
+            border-radius: 6px;
+            background: #fff;
+            color: #545454;
+            min-width: 140px;
+        }
+        .filters label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 13px;
+            font-weight: 700;
+            color: #545454;
+        }
+        .filter-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .filter-chips span {
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 999px;
+            padding: 0.35rem 0.75rem;
+            font-size: 12px;
+            font-weight: 700;
+            color: #374151;
+        }
+        .filter-clear {
+            font-size: 12px;
+            font-weight: 700;
+            color: #38b6ff;
+            text-decoration: none;
+        }
+        .filter-clear:hover { text-decoration: underline; }
+
+        .heatmap-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.8rem;
+        }
+        .heatmap-summary-card {
+            background: #fff;
+            border: 2px solid #c7da30;
+            border-radius: 10px;
+            padding: 1rem 1.15rem;
+        }
+        .heatmap-summary-card .label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #6b7280;
+            margin-bottom: 0.35rem;
+        }
+        .heatmap-summary-card .value {
+            font-size: 26px;
+            font-weight: 900;
+            color: #111827;
+            line-height: 1.1;
+        }
+        .heatmap-total-row th,
+        .heatmap-total-row td {
+            background: #e5e7eb;
+            font-weight: 800;
+        }
+
+        .heatmap-panel {
+            background: #fff;
+            border-radius: 10px;
+            padding: 1.25rem;
+            overflow-x: auto;
+            width: 100%;
+            border: 2px solid #c7da30;
+            margin-bottom: 2rem;
+        }
+        .heatmap-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .heatmap-view-toggle { display: flex; gap: 0.5rem; }
+        .heatmap-view-toggle button {
+            padding: 0.35rem 0.75rem;
+            border: 2px solid #c7da30;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            font-family: 'Montserrat', sans-serif;
+            cursor: pointer;
+            background: #fff;
+            color: #545454;
+        }
+        .heatmap-view-toggle button:hover { background: #c7da30; color: #fff; }
+        .heatmap-view-toggle button.active { background: #c7da30; color: #fff; }
+        .heatmap-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .heatmap-table { border-collapse: collapse; font-size: 13px; min-width: 100%; }
+        .heatmap-table th, .heatmap-table td { border: 1px solid #111827; padding: 0.5rem 0.65rem; text-align: center; }
+        .heatmap-corner { background: #d1d5db; font-weight: 700; text-align: left !important; min-width: 140px; }
+        .heatmap-col { background: #d1d5db; font-weight: 700; white-space: nowrap; min-width: 90px; }
+        .heatmap-row { background: #fff; font-weight: 600; text-align: left !important; padding-left: 0.75rem; min-width: 140px; }
+        .heatmap-cell { font-weight: 600; cursor: pointer; min-width: 50px; position: relative; color: #fff !important; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+        .heatmap-cell.heatmap-cell-dark { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+        .heatmap-cell:hover { outline: 2px solid #38b6ff; z-index: 2; }
+        .heatmap-cell.heat-band-0 { background-color: #b1c658; }
+        .heatmap-cell.heat-band-1 { background-color: #fdd103; }
+        .heatmap-cell.heat-band-2 { background-color: #de241b; }
+        .heatmap-total-cell { font-weight: 800; text-align: center; color: #111827; }
+        .heatmap-total-cell.heat-band-0 { background-color: #b1c658; color: #fff; }
+        .heatmap-total-cell.heat-band-1 { background-color: #fdd103; color: #111827; }
+        .heatmap-total-cell.heat-band-2 { background-color: #de241b; color: #fff; }
+        .heatmap-table tr.heatmap-row-active th.heatmap-row { background: #38b6ff; color: #fff; }
+        .heatmap-scale-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1rem; }
+        .heatmap-scale { display: flex; align-items: center; gap: 0.5rem; font-size: 12px; color: #6b7280; }
+        .heatmap-scale-bar { height: 14px; width: 180px; border-radius: 7px; background: linear-gradient(to right, #b1c658 0%, #fdd103 50%, #de241b 100%); border: 1px solid #111827; }
+
+        .map-panel { background: white; border-radius: 1rem; padding: 1.25rem; border: 2px solid #c7da30; }
+        .district-map-container {
+            height: min(920px, calc(100vh - 140px));
+            width: 100%;
+            max-width: 100%;
+            min-height: 720px;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            position: relative;
+            background: #f7f6f2;
+        }
+        .district-map-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; z-index: 1; }
+        .map-color-root {
+            /* thin dark outer silhouette only — no per-district dark strokes */
+            filter: drop-shadow(0 0 0.55px #111111);
+        }
+        .district-map-shape {
+            stroke: rgba(255,255,255,0.95);
+            stroke-width: 1px;
+            stroke-linejoin: round;
+            fill-rule: evenodd;
+            vector-effect: non-scaling-stroke;
+            transition: stroke 0.15s ease, stroke-width 0.15s ease;
+            pointer-events: all;
+        }
+        .district-map-shape.is-hover,
+        .district-map-shape.is-key-hover {
+            stroke: #111827;
+            stroke-width: 1.75px;
+        }
+        .district-map-shape.is-selected {
+            stroke: #38b6ff;
+            stroke-width: 2px;
+            filter: drop-shadow(0 0 4px rgba(56,182,255,0.45));
+        }
+        .district-map-inner-border {
+            fill: none;
+            stroke: #ffffff;
+            stroke-width: 0.9;
+            stroke-linejoin: miter;
+            stroke-linecap: butt;
+            vector-effect: non-scaling-stroke;
+            pointer-events: none;
+            shape-rendering: geometricPrecision;
+        }
+        .map-label-layer { pointer-events: none; user-select: none; }
+        .map-label-layer text {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            paint-order: stroke fill;
+            stroke: rgba(255,255,255,0.9);
+            stroke-width: 0.35px;
+            stroke-linejoin: round;
+        }
+        .map-label-layer .map-label-district {
+            fill: #111111;
+            stroke-width: 0.35px;
+        }
+        .district-map-status {
+            position: absolute; inset: 0;
+            display: grid; place-items: center;
+            font-weight: 800; color: #4b5563;
+            background: rgba(247, 246, 242, 0.65);
+            z-index: 5;
+        }
+        .district-map-tooltip {
+            position: absolute; left: 0; top: 0;
+            transform: translate(-9999px, -9999px);
+            background: rgba(255,255,255,0.98);
+            border: 1px solid rgba(17,24,39,0.2);
+            border-radius: 10px;
+            padding: 8px 10px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            font-size: 12px;
+            color: #111827;
+            pointer-events: none;
+            z-index: 25;
+            max-width: 260px;
+            line-height: 1.2;
+            display: none;
+        }
+        .district-map-tooltip .tt-title { font-weight: 900; font-size: 12px; }
+        .district-map-tooltip .tt-sub { font-weight: 700; font-size: 11px; color: #4b5563; margin-top: 2px; }
+        .map-legend {
+            position: absolute;
+            bottom: 18px;
+            right: 18px;
+            z-index: 20;
+            background: rgba(255,255,255,0.92);
+            padding: 10px 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            font-size: 13px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+        }
+        .map-legend-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #111111; margin-top: 8px; }
+        .map-legend-row:first-child { margin-top: 0; }
+        .map-legend-swatch { width: 18px; height: 18px; border-radius: 2px; border: none; }
+        .map-legend-swatch.high { background: #de241b; }
+        .map-legend-swatch.medium { background: #fdd103; }
+        .map-legend-swatch.low { background: #b1c658; }
+
+        @media (max-width: 900px) {
+            .main-panel { margin-left: 0 !important; width: 100%; }
+            .topbar {
+                height: 60px;
+                flex-basis: 60px;
+                padding: 10px 16px 0 60px;
+                box-shadow: none;
+                border: 0;
+            }
+            .dashboard-scroll { padding: 1rem; }
+            .district-map-container { height: min(560px, 72vh); min-height: 440px; }
+            h1 { font-size: 22px !important; padding: 0 0.5rem; }
+            .heatmap-wrap { -webkit-overflow-scrolling: touch; overflow-x: auto; }
+            .heatmap-table { font-size: 11px; }
+            .heatmap-table th, .heatmap-table td { padding: 0.35rem 0.45rem; }
+        }
+    </style>
+    <x-provincial-admin-styles />
+</head>
+<body class="pa-app">
+
+<x-provincial-admin-sidebar />
+
+<div class="main-panel">
+    <button class="menu-icon" id="sidebarToggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="pa-sidebar" type="button">&#9776;</button>
+
+    <div class="topbar">
+        <div class="profile">
+            <div class="meta">
+                @php
+                    $currentUser = auth()->user()->fresh();
+                    $fullName = $currentUser->name ?? 'Administrator';
+                    $nameParts = explode(' ', $fullName, 2);
+                    $firstName = $nameParts[0] ?? '';
+                    $surname = $nameParts[1] ?? '';
+                @endphp
+                <span>{{ $firstName }} {{ $surname }}</span>
+                <span class="role">Administrator</span>
+            </div>
+            <div class="profile-avatar">
+                @php $currentUser = auth()->user()->fresh(); @endphp
+                @if($currentUser && $currentUser->profile_picture)
+                    <img src="{{ $currentUser->profile_picture_url }}" alt="Profile Picture" class="profile-pic">
+                @else
+                    <svg viewBox="0 0 52 52" role="img" aria-label="Default administrator profile picture">
+                        <circle cx="26" cy="26" r="26" fill="#e3e7ec"/>
+                        <ellipse cx="26" cy="20" rx="10" ry="12" fill="#647184"/>
+                        <path d="M8 47c2-11 9-17 18-17s16 6 18 17c-5 3-11 5-18 5S13 50 8 47Z" fill="#647184"/>
+                    </svg>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-scroll" id="main-content">
+        <h1>Tekete SafeSpace Provincial Heatmap</h1>
+        <p class="subtitle">District-level intensity by report type — {{ $province->province_name }}.</p>
+
+        <section class="filter-panel" aria-label="Filters">
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0.75rem;">
+                <h2 style="margin:0;">Filters</h2>
+                @if(!empty($activeFilters))
+                    <a href="{{ url('/provincial/heatmap') }}" class="filter-clear">Clear all filters</a>
+                @endif
+            </div>
+            <hr>
+            <form method="GET" action="{{ url('/provincial/heatmap') }}" class="filters" id="heatmapFiltersForm">
+                <select name="district" id="districtSelect" onchange="this.form.submit()">
+                    <option value="">All Districts</option>
+                    @foreach ($districts as $district)
+                        <option value="{{ $district->id }}" {{ (string) $districtFilter === (string) $district->id ? 'selected' : '' }}>
+                            {{ $district->name }}
+                        </option>
+                    @endforeach
+                </select>
+                <select name="school" id="schoolSelect" onchange="this.form.submit()" {{ $districtFilter ? '' : 'disabled' }}>
+                    <option value="">All Schools</option>
+                    @foreach ($schools as $school)
+                        <option value="{{ $school->school_id }}" {{ (string) $schoolFilter === (string) $school->school_id ? 'selected' : '' }}>
+                            {{ $school->school_name }}
+                        </option>
+                    @endforeach
+                </select>
+                <select name="abuse_type" onchange="this.form.submit()">
+                    <option value="">Any Report Type</option>
+                    @foreach ($abuseTypes as $type)
+                        <option value="{{ $type->id }}" {{ (string) $abuseTypeFilter === (string) $type->id ? 'selected' : '' }}>
+                            {{ $type->type_name }}
+                        </option>
+                    @endforeach
+                </select>
+                <select name="age_range" onchange="this.form.submit()">
+                    <option value="">Any Age</option>
+                    @foreach (['0-10','11-15','16-20','21-22','30+'] as $range)
+                        <option value="{{ $range }}" {{ $ageRange === $range ? 'selected' : '' }}>{{ $range }}</option>
+                    @endforeach
+                </select>
+                <label>
+                    From
+                    <input type="date" name="from_date" value="{{ $fromDate }}" onchange="this.form.submit()">
+                </label>
+                <label>
+                    To
+                    <input type="date" name="to_date" value="{{ $toDate }}" onchange="this.form.submit()">
+                </label>
+            </form>
+            @if(!empty($activeFilters))
+                <div class="filter-chips" aria-label="Active filters">
+                    @foreach ($activeFilters as $chip)
+                        <span>{{ $chip }}</span>
+                    @endforeach
+                </div>
+            @endif
+        </section>
+
+        <div class="heatmap-summary" aria-label="Summary">
+            <div class="heatmap-summary-card">
+                <div class="label">Total reports</div>
+                <div class="value">{{ number_format($filteredReportsTotal ?? $heatmapGrandTotal) }}</div>
+            </div>
+            <div class="heatmap-summary-card">
+                <div class="label">Districts with data</div>
+                <div class="value">{{ $districtsWithReports }} <span style="font-size:14px;font-weight:700;color:#6b7280;">/ {{ count($districts) }}</span></div>
+            </div>
+            <div class="heatmap-summary-card">
+                <div class="label">Report types</div>
+                <div class="value">{{ count($heatmapAbuseTypes) }}</div>
+            </div>
+        </div>
+
+        <section class="heatmap-panel" id="districtHeatmapPanel" aria-label="Reports by District and Type">
+            <h2>Reports by District &amp; Report Type</h2>
+            <div class="heatmap-toolbar">
+                <div class="heatmap-view-toggle" role="group" aria-label="View mode">
+                    <button type="button" class="heatmap-view-btn active" data-view="count" aria-pressed="true">COUNTS</button>
+                    <button type="button" class="heatmap-view-btn" data-view="percent" aria-pressed="false">ROWS%</button>
+                </div>
+            </div>
+
+            <div class="heatmap-wrap">
+                <table class="heatmap-table" role="table">
+                    <thead>
+                        <tr>
+                            <th class="heatmap-corner">District</th>
+                            @foreach($heatmapAbuseTypes as $atype)
+                                <th class="heatmap-col">{{ $atype }}</th>
+                            @endforeach
+                            <th class="heatmap-col">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($heatmapMatrix as $districtName => $row)
+                            @php
+                                $rowDistrictId = $heatmapDistrictNameToId[$districtName] ?? null;
+                                $isActiveDistrict = $districtFilter && (string) $rowDistrictId === (string) $districtFilter;
+                            @endphp
+                            <tr class="{{ $isActiveDistrict ? 'heatmap-row-active' : '' }}">
+                                <th class="heatmap-row">{{ $districtName }}</th>
+                                @foreach($row as $colIdx => $count)
+                                    @php
+                                        $atype = $heatmapAbuseTypes[$colIdx] ?? '';
+                                        $districtId = $heatmapDistrictNameToId[$districtName] ?? null;
+                                        $abuseTypeId = $heatmapAbuseTypeNameToId[$atype] ?? null;
+                                        $pct = $heatmapPercentages[$districtName][$colIdx] ?? 0;
+                                        $intensity = ($heatmapMax ?? 1) > 0 ? min(1, $count / ($heatmapMax ?? 1)) : 0;
+                                        $colorIdx = $intensity >= 0.67 ? 2 : ($intensity >= 0.34 ? 1 : 0);
+                                        $isDark = $colorIdx === 2;
+                                        $isHotspot = in_array($colIdx, $heatmapHotspots[$districtName] ?? []);
+                                    @endphp
+                                    <td class="heatmap-cell heat-band-{{ $colorIdx }} {{ $isDark ? 'heatmap-cell-dark' : '' }} {{ $isHotspot ? 'heatmap-hotspot' : '' }}"
+                                        data-count="{{ $count }}"
+                                        data-percent="{{ $pct }}"
+                                        data-district="{{ $districtName }}"
+                                        data-abuse-type="{{ $atype }}"
+                                        data-district-id="{{ $districtId }}"
+                                        data-abuse-type-id="{{ $abuseTypeId }}"
+                                        role="button"
+                                        tabindex="0"
+                                        title="{{ $districtName }} × {{ $atype }}: {{ $count }} reports ({{ $pct }}% of district) — Click to view reports">
+                                        <span class="heatmap-cell-count">{{ $count }}</span>
+                                        <span class="heatmap-cell-pct" style="display:none;">{{ $pct }}%</span>
+                                    </td>
+                                @endforeach
+                                @php
+                                    $rowTotal = (int) ($heatmapRowTotals[$districtName] ?? 0);
+                                    $rowBand = ($rowTotal <= 0 || $rowTotal <= (int) ($mapDistrictBandLowMax ?? 0))
+                                        ? 0
+                                        : ($rowTotal <= (int) ($mapDistrictBandMediumMax ?? 0) ? 1 : 2);
+                                @endphp
+                                <td class="heatmap-total-cell heat-band-{{ $rowBand }}">{{ number_format($rowTotal) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="{{ count($heatmapAbuseTypes) + 2 }}" style="text-align:center;padding:2rem;color:#6b7280;">No report data for the selected filters.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    @if(!empty($heatmapMatrix))
+                    <tfoot>
+                        <tr class="heatmap-total-row">
+                            <th class="heatmap-row">Total</th>
+                            @foreach($heatmapColumnTotals as $colTotal)
+                                <td>{{ number_format($colTotal) }}</td>
+                            @endforeach
+                            <td>{{ number_format($heatmapGrandTotal) }}</td>
+                        </tr>
+                    </tfoot>
+                    @endif
+                </table>
+            </div>
+
+            <div class="heatmap-scale-wrap">
+                <div class="heatmap-scale" id="districtHeatmapScaleCount">
+                    <span>LOW</span>
+                    <div class="heatmap-scale-bar" aria-hidden="true"></div>
+                    <span>HIGH</span>
+                </div>
+                <div class="heatmap-scale" id="districtHeatmapScalePct" style="display:none;">
+                    <span>0%</span>
+                    <div class="heatmap-scale-bar" aria-hidden="true"></div>
+                    <span>100%</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel map-panel" aria-label="Reports by District Geographic Heatmap">
+            <h2>Geographic Distribution — {{ $province->province_name }}</h2>
+            <p class="map-source-note">District lines are Department of Basic Education education-district boundaries.</p>
+            <div id="district-map" class="district-map-container">
+                <div class="district-map-status" id="districtMapStatus">Loading map…</div>
+                <div class="district-map-tooltip" id="districtMapTooltip" style="display:none;">
+                    <div class="tt-title" id="districtMapTooltipTitle"></div>
+                    <div class="tt-sub" id="districtMapTooltipSub"></div>
+                </div>
+                <div class="map-legend" aria-label="Heatmap legend">
+                    @php
+                        $mapLow = (int) ($mapDistrictBandLowMax ?? 0);
+                        $mapMed = (int) ($mapDistrictBandMediumMax ?? 0);
+                    @endphp
+                    <div class="map-legend-row"><span class="map-legend-swatch high" aria-hidden="true"></span><span>High </span></div>
+                    @if($mapMed > $mapLow)
+                        <div class="map-legend-row"><span class="map-legend-swatch medium" aria-hidden="true"></span><span>Medium </span></div>
+                    @endif
+                    <div class="map-legend-row"><span class="map-legend-swatch low" aria-hidden="true"></span><span>Low </span></div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+(function () {
+    const reportsUrl = "{{ url('/provincial-admin/reports') }}";
+    const panel = document.getElementById('districtHeatmapPanel');
+    if (!panel) return;
+
+    const viewBtns = panel.querySelectorAll('.heatmap-view-btn');
+    const scaleCount = panel.querySelector('#districtHeatmapScaleCount');
+    const scalePct = panel.querySelector('#districtHeatmapScalePct');
+
+    function mergeHeatmapQueryParams(url) {
+        const params = new URLSearchParams(window.location.search);
+        ['district', 'school', 'abuse_type', 'from_date', 'to_date', 'age_range'].forEach(function (k) {
+            if (params.has(k)) url.searchParams.set(k, params.get(k));
+        });
+    }
+
+    viewBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const view = this.dataset.view;
+            viewBtns.forEach(function (b) { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
+            this.classList.add('active');
+            this.setAttribute('aria-pressed', 'true');
+
+            panel.querySelectorAll('.heatmap-cell').forEach(function (cell) {
+                const countEl = cell.querySelector('.heatmap-cell-count');
+                const pctEl = cell.querySelector('.heatmap-cell-pct');
+                if (countEl && pctEl) {
+                    countEl.style.display = view === 'percent' ? 'none' : '';
+                    pctEl.style.display = view === 'percent' ? '' : 'none';
+                }
+            });
+
+            if (scaleCount && scalePct) {
+                scaleCount.style.display = view === 'count' ? 'flex' : 'none';
+                scalePct.style.display = view === 'percent' ? 'flex' : 'none';
+            }
+        });
+    });
+
+    panel.querySelectorAll('.heatmap-cell[data-district-id]').forEach(function (cell) {
+        cell.addEventListener('click', function () {
+            const did = this.dataset.districtId;
+            const aid = this.dataset.abuseTypeId;
+
+            const url = new URL(reportsUrl, window.location.origin);
+            mergeHeatmapQueryParams(url);
+            if (did) url.searchParams.set('district', did);
+            if (aid && aid !== '0' && aid !== 'null' && aid !== 'undefined') url.searchParams.set('abuse_type', aid);
+            window.location.href = url.toString();
+        });
+
+        cell.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); }
+        });
+    });
+})();
+</script>
+
+<script type="application/json" id="pa-map-asset-base">@json(rtrim(asset('geojson'), '/'))</script>
+<script type="application/json" id="pa-province-slug">@json($mapProvinceSlug ?? '')</script>
+<script type="application/json" id="pa-district-counts">@json($mapDistrictCounts ?? new \stdClass())</script>
+<script type="application/json" id="pa-district-name-to-id">@json($mapDistrictNameToId ?? [])</script>
+<script type="application/json" id="pa-map-band-low-max">@json((int) ($mapDistrictBandLowMax ?? 0))</script>
+<script type="application/json" id="pa-map-band-medium-max">@json((int) ($mapDistrictBandMediumMax ?? 0))</script>
+<script type="application/json" id="pa-filtered-total">@json((int) ($filteredReportsTotal ?? 0))</script>
+
+<script>
+(function () {
+    const container = document.getElementById('district-map');
+    if (!container) return;
+
+    const mapAssetBase = JSON.parse(document.getElementById('pa-map-asset-base')?.textContent || '""');
+    const provinceSlug = JSON.parse(document.getElementById('pa-province-slug')?.textContent || '""');
+    const districtCounts = JSON.parse(document.getElementById('pa-district-counts')?.textContent || '{}');
+    const districtNameToId = JSON.parse(document.getElementById('pa-district-name-to-id')?.textContent || '{}');
+    const mapBandLowMax = Number(JSON.parse(document.getElementById('pa-map-band-low-max')?.textContent || '0')) || 0;
+    const mapBandMediumMax = Number(JSON.parse(document.getElementById('pa-map-band-medium-max')?.textContent || '0')) || 0;
+    const filteredTotal = Number(JSON.parse(document.getElementById('pa-filtered-total')?.textContent || '0')) || 0;
+
+    const statusEl = document.getElementById('districtMapStatus');
+    const tooltipEl = document.getElementById('districtMapTooltip');
+    const tooltipTitleEl = document.getElementById('districtMapTooltipTitle');
+    const tooltipSubEl = document.getElementById('districtMapTooltipSub');
+
+    let districtLayer = null;
+
+    function keyName(name) {
+        return String(name || '').toLowerCase()
+            .replace(/&/g, 'and')
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/^city of\s+/, '')
+            .replace(/ekhurhuleni/g, 'ekurhuleni')
+            .replace(/\s+district municipality$/, '')
+            .replace(/\s+metropolitan municipality$/, '')
+            .replace(/\s+metro$/, '')
+            .replace(/\s*\([^)]*\)/g, '')
+            .trim();
+    }
+
+    function cleanLabel(name) {
+        return String(name || '').trim()
+            .replace(/\s+District Municipality$/i, '')
+            .replace(/\s+Metropolitan Municipality$/i, '')
+            .trim();
+    }
+
+    function titleCaseLabel(name) {
+        return String(name || '').trim().toLowerCase().replace(/\b\w/g, function (c) {
+            return c.toUpperCase();
+        });
+    }
+
+    function mapDisplayLabel(name) {
+        // Keep reference labels intact (e.g. "Tshwane Metro (Pretoria)")
+        const raw = String(name || '').trim();
+        if (!raw) return '';
+        if (/\(|Metro|Region|Vaal/i.test(raw)) return raw;
+        return titleCaseLabel(cleanLabel(raw))
+            .replace(/^city of\s+/i, '')
+            .replace(/ekhurhuleni/i, 'Ekurhuleni');
+    }
+
+    const HEAT_LOW = '#b1c658';
+    const HEAT_MED = '#fdd103';
+    const HEAT_HIGH = '#de241b';
+
+    function heatColor(bandIdx) {
+        if (bandIdx === 2) return HEAT_HIGH;
+        if (bandIdx === 1) return HEAT_MED;
+        return HEAT_LOW;
+    }
+
+    function heatGradientStops(bandIdx) {
+        if (bandIdx === 2) {
+            return [
+                { offset: '0%', color: HEAT_HIGH },
+                { offset: '100%', color: '#ef4a2a' },
+            ];
+        }
+        if (bandIdx === 1) {
+            return [
+                { offset: '0%', color: HEAT_MED },
+                { offset: '100%', color: '#c5d46e' },
+            ];
+        }
+        return [
+            { offset: '0%', color: HEAT_LOW },
+            { offset: '100%', color: HEAT_LOW },
+        ];
+    }
+
+    // Glow stops for the blurred heat blobs: a hot core that fades out to
+    // fully transparent so neighbouring blobs blend together over the green
+    // base, the way a real heatmap "bleeds" across district lines.
+    function heatGlowStops(bandIdx) {
+        if (bandIdx === 2) {
+            return [
+                { offset: '0%', color: HEAT_HIGH, opacity: 0.95 },
+                { offset: '35%', color: '#ea4b1f', opacity: 0.8 },
+                { offset: '65%', color: HEAT_MED, opacity: 0.45 },
+                { offset: '100%', color: HEAT_MED, opacity: 0 },
+            ];
+        }
+        return [
+            { offset: '0%', color: HEAT_MED, opacity: 0.85 },
+            { offset: '55%', color: '#eec24f', opacity: 0.4 },
+            { offset: '100%', color: HEAT_LOW, opacity: 0 },
+        ];
+    }
+
+    function districtGlowRadius(bb) {
+        const cx = bb.x + bb.width / 2;
+        const cy = bb.y + bb.height / 2;
+        const corners = [
+            [bb.x, bb.y],
+            [bb.x + bb.width, bb.y],
+            [bb.x, bb.y + bb.height],
+            [bb.x + bb.width, bb.y + bb.height],
+        ];
+        let maxDist = 0;
+        corners.forEach(function (pt) {
+            const d = Math.hypot(pt[0] - cx, pt[1] - cy);
+            if (d > maxDist) maxDist = d;
+        });
+        // Bigger than the district itself so the glow bleeds into its
+        // neighbours instead of stopping dead at the boundary line.
+        return Math.max(maxDist * 1.7, 10);
+    }
+
+    function addHeatGlow(path, bandIdx, defs, glowLayer, svgNS, glowSeq, blurFilterId) {
+        if (bandIdx === 0) return glowSeq; // low districts: just show the green base, no glow
+        let bb;
+        try {
+            bb = path.getBBox();
+        } catch (e) {
+            return glowSeq;
+        }
+        if (!(bb.width > 0) || !(bb.height > 0)) return glowSeq;
+
+        const cx = bb.x + bb.width / 2;
+        const cy = bb.y + bb.height / 2;
+        const r = districtGlowRadius(bb);
+        const gradId = 'pa-glow-' + glowSeq;
+
+        const grad = document.createElementNS(svgNS, 'radialGradient');
+        grad.setAttribute('id', gradId);
+        grad.setAttribute('gradientUnits', 'userSpaceOnUse');
+        grad.setAttribute('cx', String(cx));
+        grad.setAttribute('cy', String(cy));
+        grad.setAttribute('r', String(r));
+        grad.setAttribute('spreadMethod', 'pad');
+
+        heatGlowStops(bandIdx).forEach(function (stopDef) {
+            const stop = document.createElementNS(svgNS, 'stop');
+            stop.setAttribute('offset', stopDef.offset);
+            stop.setAttribute('stop-color', stopDef.color);
+            stop.setAttribute('stop-opacity', String(stopDef.opacity));
+            grad.appendChild(stop);
+        });
+        defs.appendChild(grad);
+
+        const blob = document.createElementNS(svgNS, 'circle');
+        blob.setAttribute('cx', String(cx));
+        blob.setAttribute('cy', String(cy));
+        blob.setAttribute('r', String(r));
+        blob.setAttribute('fill', 'url(#' + gradId + ')');
+        blob.setAttribute('filter', 'url(#' + blurFilterId + ')');
+        blob.setAttribute('pointer-events', 'none');
+        // High-band blobs painted after medium ones so hotspots read on top
+        if (bandIdx === 2) {
+            glowLayer.appendChild(blob);
+        } else {
+            glowLayer.insertBefore(blob, glowLayer.firstChild);
+        }
+        return glowSeq + 1;
+    }
+
+    function labelLines(text) {
+        const paren = String(text || '').match(/^(.+?)\s*(\([^)]+\))\s*$/);
+        if (paren) return [paren[1].trim(), paren[2].trim()];
+        const parts = String(text || '').trim().split(/\s+/);
+        if (parts.length >= 3) {
+            return [parts.slice(0, Math.ceil(parts.length / 2)).join(' '), parts.slice(Math.ceil(parts.length / 2)).join(' ')];
+        }
+        if (parts.length === 2) return parts;
+        return [text];
+    }
+
+    function labelBox(cx, cy, boxW, boxH) {
+        return {
+            left: cx - boxW / 2,
+            right: cx + boxW / 2,
+            top: cy - boxH / 2,
+            bottom: cy + boxH / 2,
+        };
+    }
+
+    function labelsOverlap(a, b, gap) {
+        return a.left < b.right + gap
+            && a.right + gap > b.left
+            && a.top < b.bottom + gap
+            && a.bottom + gap > b.top;
+    }
+
+    function findClearLabelPoint(originX, originY, boxW, boxH, placed, bb) {
+        const gap = 1.1;
+        const stepX = Math.max(boxW * 0.28, 1.35);
+        const stepY = Math.max(boxH * 0.55, 1.25);
+
+        function isClear(x, y) {
+            const box = labelBox(x, y, boxW, boxH);
+            for (let i = 0; i < placed.length; i++) {
+                if (labelsOverlap(box, placed[i], gap)) return false;
+            }
+            return true;
+        }
+
+        function inDistrict(x, y) {
+            return x >= bb.x && x <= bb.x + bb.width && y >= bb.y && y <= bb.y + bb.height;
+        }
+
+        if (isClear(originX, originY)) return { x: originX, y: originY };
+
+        const dirs = [
+            [0, -1], [0, 1], [1, 0], [-1, 0],
+            [0.7, -1], [-0.7, -1], [0.7, 1], [-0.7, 1],
+            [1, -0.7], [-1, -0.7], [1, 0.7], [-1, 0.7],
+            [1, -1], [-1, -1], [1, 1], [-1, 1],
+        ];
+
+        let outsideClear = null;
+        for (let ring = 1; ring <= 36; ring++) {
+            for (let d = 0; d < dirs.length; d++) {
+                const x = originX + dirs[d][0] * stepX * ring;
+                const y = originY + dirs[d][1] * stepY * ring;
+                if (!isClear(x, y)) continue;
+                if (inDistrict(x, y)) return { x: x, y: y };
+                if (!outsideClear) outsideClear = { x: x, y: y };
+            }
+        }
+        return outsideClear || { x: originX, y: originY };
+    }
+
+    function heatBandIndexFromCount(count) {
+        const c = Number(count) || 0;
+        if (c <= 0 || c <= mapBandLowMax) return 0;
+        if (c <= mapBandMediumMax) return 1;
+        return 2;
+    }
+
+    function moveTooltip(clientX, clientY) {
+        if (!tooltipEl) return;
+        const rect = container.getBoundingClientRect();
+        const pad = 12;
+        const x = Math.min(rect.width - pad, Math.max(pad, clientX - rect.left + 12));
+        const y = Math.min(rect.height - pad, Math.max(pad, clientY - rect.top + 12));
+        tooltipEl.style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px)';
+    }
+
+    function showTooltip(clientX, clientY, title, count) {
+        if (!tooltipEl || !tooltipTitleEl || !tooltipSubEl) return;
+        tooltipTitleEl.textContent = String(title || '');
+        tooltipSubEl.textContent = Number(count).toLocaleString() + (Number(count) === 1 ? ' report' : ' reports');
+        tooltipEl.style.display = 'block';
+        moveTooltip(clientX, clientY);
+    }
+
+    function hideTooltip() {
+        if (!tooltipEl) return;
+        tooltipEl.style.display = 'none';
+        tooltipEl.style.transform = 'translate(-9999px, -9999px)';
+    }
+
+    async function fetchJson(url) {
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function loadMapItems() {
+        const bust = Date.now();
+        return fetchJson(mapAssetBase + '/' + provinceSlug + '.education.json?v=' + bust);
+    }
+
+    const countsByNorm = {};
+    Object.keys(districtCounts || {}).forEach(function (dbName) {
+        countsByNorm[keyName(dbName)] = Number(districtCounts[dbName]) || 0;
+    });
+    const districtIdByNorm = {};
+    Object.keys(districtNameToId || {}).forEach(function (dbName) {
+        districtIdByNorm[keyName(dbName)] = districtNameToId[dbName];
+    });
+
+    const GEO_DB_PREFIXES = {
+        'alfred nzo east': ['alfred nzo east'],
+        'alfred nzo west': ['alfred nzo west'],
+        'amathole east': ['amathole east'],
+        'amathole west': ['amathole west'],
+        'buffalo city': ['buffalo city'],
+        'chris hani east': ['chris hani east'],
+        'chris hani west': ['chris hani west'],
+        'joe gqabi': ['joe gqabi'],
+        'nelson mandela': ['nelson mandela'],
+        'or tambo coastal': ['or tambo coastal'],
+        'or tambo inland': ['or tambo inland'],
+        'sarah baartman': ['sarah baartman'],
+        'manguang': ['motheo'],
+        'motheo': ['motheo'],
+        'lejweleputswa': ['lejweleputswa', 'letjweleputswa'],
+        'thabo mofutsanyana': ['thabo mofutsanyana'],
+        'fezile dabi': ['fezile dabi'],
+        'xhariep': ['xhariep'],
+        'amajuba': ['amajuba'],
+        'harry gwala': ['harry gwala'],
+        'ilembe': ['ilembe'],
+        'king cetshwayo': ['king cetshwayo'],
+        'pinetown': ['pinetown'],
+        'ugu': ['ugu'],
+        'umgungundlovu': ['umgungundlovu'],
+        'umkhanyakude': ['umkhanyakude'],
+        'umlazi': ['umlazi'],
+        'umzinyathi': ['umzinyathi'],
+        'uthukela': ['uthukela'],
+        'zululand': ['zululand'],
+        'ehlanzeni': ['ehlanzeni', 'bohlabela'],
+        'gert sibande': ['gert sibande'],
+        'nkangala': ['nkangala'],
+        'capricorn north': ['capricorn north'],
+        'capricorn south': ['capricorn south'],
+        'mogalakwena': ['mogalakwena'],
+        'mopani east': ['mopani east'],
+        'mopani west': ['mopani west'],
+        'sekhukhune east': ['sekhukhune east'],
+        'sekhukhune south': ['sekhukhune south'],
+        'vhembe east': ['vhembe east'],
+        'vhembe west': ['vhembe west'],
+        'waterberg': ['waterberg'],
+        'cape winelands': ['cape winelands'],
+        'eden and central karoo': ['eden and central karoo'],
+        'metro central': ['metro central'],
+        'metro east': ['metro east'],
+        'metro north': ['metro north'],
+        'metro south': ['metro south'],
+        'overberg': ['overberg'],
+        'west coast': ['west coast'],
+        'frances baard': ['frances baard'],
+        'john taolo gaetsewe': ['john taolo gaetsewe'],
+        'namakwa': ['namakwa'],
+        'pixley ka seme': ['pixley ka seme'],
+        'zf mgcawu': ['zf mgcawu'],
+        'siyanda': ['zf mgcawu'],
+        'ngaka modiri molema': ['ngaka modiri molema'],
+        'bojanala': ['bojanala'],
+        'bojanala platinum': ['bojanala'],
+        'dr kenneth kaunda': ['dr kenneth kaunda'],
+        'dr ruth s mompati': ['dr ruth s mompati', 'dr ruth segomotsi mompati'],
+        'dr ruth segomotsi mompati': ['dr ruth s mompati', 'dr ruth segomotsi mompati'],
+    };
+
+    function matchesGeoDistrict(geoNorm, dbNorm) {
+        if (!geoNorm || !dbNorm) return false;
+        if (geoNorm === dbNorm) return true;
+
+        // Prefer exact education-district names; avoid parent→child bundling
+        // (e.g. "tshwane" must not swallow "tshwane north" + "tshwane south").
+        const geoTokens = geoNorm.split(' ').filter(Boolean);
+        const dbTokens = dbNorm.split(' ').filter(Boolean);
+        if (geoTokens.length >= 2 && dbTokens.length >= 2) {
+            return false;
+        }
+
+        const prefixes = GEO_DB_PREFIXES[geoNorm];
+        if (prefixes) {
+            for (let i = 0; i < prefixes.length; i++) {
+                const p = keyName(prefixes[i]);
+                if (dbNorm === p || dbNorm.indexOf(p + ' ') === 0) return true;
+            }
+        }
+        if (dbNorm.indexOf(geoNorm + ' ') === 0 || geoNorm.indexOf(dbNorm + ' ') === 0) return true;
+        return false;
+    }
+
+    const geoCountCache = {};
+    function countForDbNames(dbNames) {
+        const names = Array.isArray(dbNames) ? dbNames : [];
+        if (!names.length) return null;
+        const seen = {};
+        let matched = false;
+        let total = 0;
+        names.forEach(function (n) {
+            const k = keyName(n);
+            if (!k || seen[k]) return;
+            seen[k] = true;
+            if (countsByNorm[k] === undefined) return;
+            matched = true;
+            total += Number(countsByNorm[k]) || 0;
+        });
+        return matched ? total : null;
+    }
+
+    function countForGeo(rawGeoName, dbNames) {
+        const fromDb = countForDbNames(dbNames);
+        if (fromDb !== null) return fromDb;
+
+        const geoKey = keyName(rawGeoName);
+        if (geoCountCache[geoKey] !== undefined) return geoCountCache[geoKey];
+
+        if (countsByNorm[geoKey] !== undefined) {
+            geoCountCache[geoKey] = Number(countsByNorm[geoKey]) || 0;
+            return geoCountCache[geoKey];
+        }
+
+        let total = 0;
+        Object.keys(countsByNorm || {}).forEach(function (dbNorm) {
+            if (matchesGeoDistrict(geoKey, dbNorm)) {
+                total += Number(countsByNorm[dbNorm]) || 0;
+            }
+        });
+        geoCountCache[geoKey] = total;
+        return total;
+    }
+
+    function primaryDistrictIdForGeo(rawGeoName, dbNames) {
+        const names = Array.isArray(dbNames) && dbNames.length ? dbNames : [rawGeoName];
+        for (let i = 0; i < names.length; i++) {
+            const k = keyName(names[i]);
+            if (districtIdByNorm[k]) return districtIdByNorm[k];
+        }
+        const geoKey = keyName(rawGeoName);
+        if (districtIdByNorm[geoKey]) return districtIdByNorm[geoKey];
+        const norms = Object.keys(districtIdByNorm || {});
+        for (let i = 0; i < norms.length; i++) {
+            if (matchesGeoDistrict(geoKey, norms[i])) return districtIdByNorm[norms[i]];
+        }
+        return null;
+    }
+
+    function appendDistrictShape(it, layer, svgNS) {
+        const pathD = it && it.path ? String(it.path) : '';
+        const rawName = (it && it.name) ? String(it.name).trim() : '';
+        if (!pathD || !rawName) return null;
+
+        const dbNames = (it && Array.isArray(it.db_names)) ? it.db_names : [];
+        const count = countForGeo(rawName, dbNames);
+        const displayLabel = mapDisplayLabel(rawName);
+        const bandIdx = heatBandIndexFromCount(count);
+        const districtId = primaryDistrictIdForGeo(rawName, dbNames);
+
+        const path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('d', pathD);
+        path.setAttribute('class', 'district-map-shape' + (bandIdx === 2 ? ' district-map-shape-dark' : ''));
+        path.setAttribute('fill-rule', 'evenodd');
+        path.setAttribute('data-heat-band', String(bandIdx));
+        path.setAttribute('fill', HEAT_LOW);
+        path.setAttribute('fill-opacity', '1');
+        path.setAttribute('data-shape-kind', 'district');
+        path.setAttribute('data-district-id', districtId ? String(districtId) : '');
+        path.setAttribute('data-district-label', displayLabel);
+        path.setAttribute('data-count', String(count));
+        path.style.cursor = 'default';
+        layer.appendChild(path);
+        return path;
+    }
+
+    function appendStrokePath(pathD, className, layer, svgNS) {
+        if (!pathD) return;
+        const border = document.createElementNS(svgNS, 'path');
+        border.setAttribute('d', pathD);
+        border.setAttribute('class', className);
+        border.setAttribute('fill', 'none');
+        layer.appendChild(border);
+    }
+
+    loadMapItems()
+        .then(function (rawItems) {
+            const districtItems = (Array.isArray(rawItems) ? rawItems : []).filter(function (it) {
+                return it && it.path && it.name;
+            });
+            if (!districtItems.length) throw new Error('Empty map data');
+
+            const svgNS = 'http://www.w3.org/2000/svg';
+            const svg = document.createElementNS(svgNS, 'svg');
+            svg.setAttribute('class', 'district-map-svg');
+            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+            const defs = document.createElementNS(svgNS, 'defs');
+            svg.appendChild(defs);
+            const g = document.createElementNS(svgNS, 'g');
+            g.setAttribute('class', 'za-map-root');
+            svg.appendChild(g);
+
+            // Choropleth fills stay inside each district path (no spilling glow)
+            const colorRoot = document.createElementNS(svgNS, 'g');
+            colorRoot.setAttribute('class', 'map-color-root');
+            districtLayer = document.createElementNS(svgNS, 'g');
+            districtLayer.setAttribute('class', 'district-layer');
+            g.appendChild(colorRoot);
+            colorRoot.appendChild(districtLayer);
+
+            districtItems.forEach(function (it) {
+                appendDistrictShape(it, districtLayer, svgNS);
+            });
+
+            const oldSvg = container.querySelector('svg.district-map-svg');
+            if (oldSvg) oldSvg.remove();
+            container.insertBefore(svg, container.firstChild);
+
+            requestAnimationFrame(function () {
+                try {
+                    const mapBb = g.getBBox();
+                    if (mapBb.width > 0 && mapBb.height > 0) {
+                        const pad = 12;
+                        svg.setAttribute('viewBox',
+                            (mapBb.x - pad) + ' ' + (mapBb.y - pad) + ' ' +
+                            (mapBb.width + pad * 2) + ' ' + (mapBb.height + pad * 2));
+                    }
+                } catch (e) {}
+
+                const clip = document.createElementNS(svgNS, 'clipPath');
+                clip.setAttribute('id', 'pa-province-clip');
+                clip.setAttribute('clipPathUnits', 'userSpaceOnUse');
+                districtLayer.querySelectorAll('.district-map-shape').forEach(function (pathEl) {
+                    const clipPath = document.createElementNS(svgNS, 'path');
+                    clipPath.setAttribute('d', pathEl.getAttribute('d') || '');
+                    clip.appendChild(clipPath);
+                });
+                defs.appendChild(clip);
+                colorRoot.setAttribute('clip-path', 'url(#pa-province-clip)');
+
+                let mapBbFill;
+                try { mapBbFill = districtLayer.getBBox(); } catch (e) { mapBbFill = null; }
+                if (mapBbFill && mapBbFill.width > 0) {
+                    const base = document.createElementNS(svgNS, 'rect');
+                    base.setAttribute('x', String(mapBbFill.x - 2));
+                    base.setAttribute('y', String(mapBbFill.y - 2));
+                    base.setAttribute('width', String(mapBbFill.width + 4));
+                    base.setAttribute('height', String(mapBbFill.height + 4));
+                    base.setAttribute('fill', HEAT_LOW);
+                    base.setAttribute('class', 'map-green-base');
+                    base.setAttribute('pointer-events', 'none');
+                    colorRoot.insertBefore(base, districtLayer);
+                }
+
+                // Blur radius scales with the overall map size so the glow
+                // reads the same on a small province and a big one.
+                const blurFilterId = 'pa-heat-blur';
+                const blurFilter = document.createElementNS(svgNS, 'filter');
+                blurFilter.setAttribute('id', blurFilterId);
+                blurFilter.setAttribute('x', '-100%');
+                blurFilter.setAttribute('y', '-100%');
+                blurFilter.setAttribute('width', '300%');
+                blurFilter.setAttribute('height', '300%');
+                const feBlur = document.createElementNS(svgNS, 'feGaussianBlur');
+                const blurStd = mapBbFill ? Math.max((mapBbFill.width + mapBbFill.height) / 2 * 0.018, 1.5) : 4;
+                feBlur.setAttribute('stdDeviation', String(blurStd));
+                blurFilter.appendChild(feBlur);
+                defs.appendChild(blurFilter);
+
+                const heatGlowLayer = document.createElementNS(svgNS, 'g');
+                heatGlowLayer.setAttribute('class', 'heat-glow-layer');
+                heatGlowLayer.setAttribute('clip-path', 'url(#pa-province-clip)');
+                // Insert right after colorRoot (green base + district outlines)
+                // so the glow sits on top of the map but under the labels.
+                g.insertBefore(heatGlowLayer, colorRoot.nextSibling);
+
+                let glowSeq = 0;
+                districtLayer.querySelectorAll('.district-map-shape').forEach(function (path) {
+                    const bandIdx = Number(path.getAttribute('data-heat-band') || 0);
+                    glowSeq = addHeatGlow(path, bandIdx, defs, heatGlowLayer, svgNS, glowSeq, blurFilterId);
+                });
+
+                const labelAnchors = {};
+                districtItems.forEach(function (it) {
+                    if (it && it.name && typeof it.label_x === 'number' && typeof it.label_y === 'number') {
+                        labelAnchors[String(it.name)] = { x: it.label_x, y: it.label_y };
+                    }
+                });
+
+                const labelLayer = document.createElementNS(svgNS, 'g');
+                labelLayer.setAttribute('class', 'map-label-layer');
+                labelLayer.setAttribute('aria-hidden', 'true');
+                g.appendChild(labelLayer);
+
+                const placed = [];
+                const labelCandidates = [];
+                districtLayer.querySelectorAll('.district-map-shape').forEach(function (pathEl) {
+                    let bb;
+                    try { bb = pathEl.getBBox(); } catch (e) { return; }
+                    if (!(bb.width > 0) || !(bb.height > 0)) return;
+
+                    const text = String(pathEl.getAttribute('data-district-label') || '').trim();
+                    if (!text) return;
+
+                    labelCandidates.push({
+                        bb: bb,
+                        text: text,
+                        area: bb.width * bb.height,
+                    });
+                });
+
+                labelCandidates.sort(function (a, b) { return b.area - a.area; });
+
+                labelCandidates.forEach(function (item) {
+                    const bb = item.bb;
+                    const text = item.text;
+                    const anchor = labelAnchors[text];
+                    let cx = anchor ? anchor.x : (bb.x + bb.width / 2);
+                    let cy = anchor ? anchor.y : (bb.y + bb.height / 2);
+
+                    const lines = labelLines(text);
+                    const longest = lines.reduce(function (a, b) { return a.length >= b.length ? a : b; }, '');
+                    const fs = 1.7;
+                    const boxW = Math.max(longest.length * fs * 0.62, fs * 3);
+                    const boxH = fs * 1.32 * lines.length;
+                    const pt = findClearLabelPoint(cx, cy, boxW, boxH, placed, bb);
+                    cx = pt.x;
+                    cy = pt.y;
+
+                    const textEl = document.createElementNS(svgNS, 'text');
+                    textEl.setAttribute('x', String(cx));
+                    textEl.setAttribute('y', String(cy));
+                    textEl.setAttribute('text-anchor', 'middle');
+                    textEl.setAttribute('dominant-baseline', 'middle');
+                    textEl.setAttribute('font-size', String(fs));
+                    textEl.setAttribute('class', 'map-label-district');
+
+                    if (lines.length === 1) {
+                        textEl.textContent = lines[0];
+                    } else {
+                        const lh = fs * 1.32;
+                        const startY = cy - (lh * (lines.length - 1)) / 2;
+                        lines.forEach(function (line, idx) {
+                            const tspan = document.createElementNS(svgNS, 'tspan');
+                            tspan.setAttribute('x', String(cx));
+                            tspan.setAttribute('y', String(startY + idx * lh));
+                            tspan.textContent = line;
+                            textEl.appendChild(tspan);
+                        });
+                    }
+                    labelLayer.appendChild(textEl);
+                    placed.push({
+                        left: cx - boxW / 2,
+                        right: cx + boxW / 2,
+                        top: cy - boxH / 2,
+                        bottom: cy + boxH / 2,
+                    });
+                });
+
+                let hovered = null;
+                svg.addEventListener('mousemove', function (event) {
+                    const target = event.target;
+                    const isDistrict = (target instanceof SVGGeometryElement) && target.classList.contains('district-map-shape');
+                    if (!isDistrict) {
+                        if (hovered) hovered.classList.remove('is-hover');
+                        hovered = null;
+                        hideTooltip();
+                        return;
+                    }
+                    if (hovered && hovered !== target) hovered.classList.remove('is-hover');
+                    hovered = target;
+                    hovered.classList.add('is-hover');
+                    showTooltip(
+                        event.clientX,
+                        event.clientY,
+                        target.getAttribute('data-district-label'),
+                        target.getAttribute('data-count')
+                    );
+                });
+                svg.addEventListener('mouseleave', function () {
+                    if (hovered) hovered.classList.remove('is-hover');
+                    hovered = null;
+                    hideTooltip();
+                });
+
+                if (statusEl) statusEl.style.display = 'none';
+            });
+        })
+        .catch(function (err) {
+            if (statusEl) statusEl.textContent = 'Map unavailable';
+            if (typeof console !== 'undefined' && console.error) {
+                console.error('Provincial heatmap map failed:', err);
+            }
+        });
+})();
+</script>
+<script>
+async function exportPDF() {
+    const mainContent = document.getElementById('main-content');
+
+    if (!mainContent) {
+        alert("Main content not found! Add id='main-content' to your wrapper element.");
+        return;
+    }
+
+    // Find the map container generically — by id first, falling back to class.
+    // Also try finding any .district-map-svg directly in case the container
+    // markup ever changes, matching the national page's approach.
+    const mapContainer = document.getElementById('district-map') || document.querySelector('.district-map-container');
+    let tempImgElement = null;
+    let mapExportFailed = false;
+
+    if (mapContainer) {
+        const svgElement = mapContainer.querySelector('svg.district-map-svg') || mapContainer.querySelector('svg');
+
+        try {
+            let mapImageData = null;
+
+            // SCENARIO A: Map is drawn with SVG
+            if (svgElement) {
+                // Bail out early and loudly if the map hasn't actually loaded yet
+                // (e.g. still shows "Loading map…" / fetch failed) rather than
+                // silently exporting a blank area.
+                const hasShapes = svgElement.querySelector('.district-map-shape');
+                if (!hasShapes) {
+                    console.warn('Map SVG found but has no district shapes — map may still be loading or failed to fetch.');
+                }
+
+                const clone = svgElement.cloneNode(true);
+                const box = svgElement.getBoundingClientRect();
+                const w = Math.max(1, Math.round(box.width || svgElement.clientWidth || 800));
+                const h = Math.max(1, Math.round(box.height || svgElement.clientHeight || 520));
+                clone.setAttribute('width', String(w));
+                clone.setAttribute('height', String(h));
+                clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+                // A standalone data:image/svg+xml document has no access to
+                // the page's external <style> block, so every class-based
+                // rule (district borders, label outlines, the drop-shadow)
+                // silently drops out when this gets rasterized for the PDF.
+                // Embed the rules we actually need directly in the clone.
+                const inlineStyle = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+                inlineStyle.textContent = [
+                    '.district-map-shape{stroke:rgba(255,255,255,0.95);stroke-width:1px;',
+                    'stroke-linejoin:round;fill-rule:evenodd;vector-effect:non-scaling-stroke;}',
+                    '.map-color-root{filter:drop-shadow(0 0 0.55px #111111);}',
+                    '.map-label-layer text{font-family:"Montserrat",sans-serif;font-weight:600;',
+                    'paint-order:stroke fill;stroke:rgba(255,255,255,0.9);stroke-width:0.35px;',
+                    'stroke-linejoin:round;}',
+                    '.map-label-district{fill:#111111;}',
+                ].join('');
+                clone.insertBefore(inlineStyle, clone.firstChild);
+
+                const svgData = new XMLSerializer().serializeToString(clone);
+                const svg64 = btoa(unescape(encodeURIComponent(svgData)));
+                mapImageData = 'data:image/svg+xml;base64,' + svg64;
+            }
+            // SCENARIO B: Map is drawn on Canvas (Leaflet / Mapbox / Chart.js)
+            else {
+                const mapCanvas = await html2canvas(mapContainer, {
+                    useCORS: true,
+                    allowTaint: false,
+                    scale: 2
+                });
+                mapImageData = mapCanvas.toDataURL('image/png');
+            }
+
+            // Create temporary image tag replacing the live interactive map.
+            // Attach load/error handlers BEFORE setting src (only once), so we
+            // never miss a fast-resolving data URI and never rely on a second
+            // no-op src assignment.
+            if (mapImageData) {
+                tempImgElement = document.createElement('img');
+                tempImgElement.style.width = mapContainer.offsetWidth + 'px';
+                tempImgElement.style.height = mapContainer.offsetHeight + 'px';
+                tempImgElement.style.objectFit = 'contain';
+                tempImgElement.style.display = 'block';
+
+                await new Promise((resolve) => {
+                    // Resolve on both load AND error so one bad image doesn't
+                    // hang the whole export — but log the error so it's not silent.
+                    tempImgElement.onload = resolve;
+                    tempImgElement.onerror = function (e) {
+                        console.error('Map image failed to decode for PDF export:', e);
+                        mapExportFailed = true;
+                        resolve();
+                    };
+                    tempImgElement.src = mapImageData;
+                    // Handle the case where the browser decodes synchronously
+                    // and fires load before this handler assignment completes.
+                    if (tempImgElement.complete && tempImgElement.naturalWidth > 0) {
+                        resolve();
+                    }
+                });
+
+                mapContainer.style.display = 'none';
+                mapContainer.parentNode.insertBefore(tempImgElement, mapContainer);
+            }
+        } catch (err) {
+            mapExportFailed = true;
+            console.error("Failed to convert map element for PDF generation:", err);
+        }
+    } else {
+        console.warn('Map container not found — exporting without map replacement.');
+    }
+
+    if (mapExportFailed) {
+        console.warn('Proceeding with PDF export despite map capture issue — check console above for details.');
+    }
+
+    // Configure html2pdf to prevent text/row overlapping
+    const opt = {
+        margin:       [10, 10, 10, 10], // top, left, bottom, right in mm
+        filename:      @js($mapProvinceSlug . '-provincial-heatmap.pdf'),
+        html2canvas:  {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            logging: false
+        },
+        jsPDF:        { unit: 'mm', format: 'a3', orientation: 'landscape' },
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+
+    try {
+        // Run PDF Generation
+        await html2pdf().set(opt).from(mainContent).save();
+    } catch (err) {
+        console.error('PDF generation failed:', err);
+        alert('PDF export failed. Please refresh and try again.');
+    } finally {
+        // Restore live map DOM state regardless of success/failure above
+        if (mapContainer && tempImgElement) {
+            tempImgElement.remove();
+            mapContainer.style.display = '';
+            if (window.map && typeof window.map.invalidateSize === 'function') {
+                window.map.invalidateSize();
+            }
+        }
+    }
+}
+</script>
+
+<x-provincial-admin-sidebar-script />
+
+</body>
+</html>
